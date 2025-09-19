@@ -62,7 +62,7 @@ namespace esphome::meshmesh
     void default_preferences_();
     void pre_setup_preferences_();
 
-    int8_t handle_frame_(uint8_t *buf, uint16_t len, uint32_t from);
+    int8_t handle_frame_(uint8_t *buf, uint16_t size, uint32_t from);
 
     bool reboot_requested_{false};
     uint32_t reboot_requested_time_{0};

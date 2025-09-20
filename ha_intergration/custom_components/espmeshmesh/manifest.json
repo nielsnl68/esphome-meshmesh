@@ -1,0 +1,19 @@
+{
+  "domain": "espMeshMeshHub",
+  "name": "espMeshMeshHub  cooordinator",
+  "codeowners": [
+    "@EspMeshMesh"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/EspMeshMesh/esphome-meshmesh",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/EspMeshMesh/esphome-meshmesh/issues",
+  "loggers": [
+  	"espMeshMeshHub"
+  ],
+  "requirements": [
+    "espMeshMeshHub==0.1.7"
+  ],
+  "version": "0.0.1"
+}

@@ -96,7 +96,7 @@ void MeshmeshComponent::loop() {
   }
 }
 
-int8_t MeshmeshComponent::handle_Frame_(uint8_t *data, uint16_t size, uint32_t from) {
+int8_t MeshmeshComponent::handle_frame_(uint8_t *data, uint16_t size, uint32_t from) {
   //ESP_LOGD(TAG, "handleFrame: %d, size: %d, from: %d", data[0], size, from);
   switch (data[0]) {
     case CMD_NODE_TAG_REQ:

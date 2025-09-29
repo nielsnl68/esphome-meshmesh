@@ -1,98 +1,33 @@
-#include "meshmesh.h"
+#include "mesh_node.h"
 #include "commands.h"
 #include <packetbuf.h>
 #include <discovery.h>
-#include <espmeshmesh.h>
+
 
 #include "esphome/core/application.h"
 #include "esphome/core/log.h"
-#include "esphome/core/preferences.h"
 #include "esphome/core/application.h"
-#include "esphome/core/version.h"
 
-#define MAX_CHANNEL 13
 
-static const char *TAG = "meshmesh";
-static const uint32_t REBOOT_DELAY_TIME = 250;
+static const char *TAG = "meshmesh.node";
 
-#ifdef USE_ESP8266
-void IRAM_ATTR HOT __wrap_ppEnqueueRxq(void *a) {
-	// 4 is the only spot that contained the packets. Discovered by trial and error printing the data
-    if(espmeshmesh::PacketBuf::singleton) espmeshmesh::PacketBuf::singleton->rawRecv((espmeshmesh::RxPacket *)(((void **)a)[4]));
-	__real_ppEnqueueRxq(a);
-}
-#endif
 
 namespace esphome::meshmesh {
 
 
-void MeshmeshComponent::default_preferences_() {
-  // Default preferences
-  memset(this->preferences_.devicetag, 0, 32);
-  this->preferences_.channel = UINT8_MAX;
-  this->preferences_.txPower = UINT8_MAX;
-  this->preferences_.flags = 0;
-  this->preferences_.log_destination = 0;
-  this->preferences_.groups = 0;
-#ifdef USE_BONDING_MODE
-  // The bonding will permit this node to receive frames only from the bonded node.
-  // * 0x0: bonding is disabled,
-  // * UINT32_MAX: node not bondend,
-  // * otherwise: the node id of the bonded node
-  this->preferences_.bonded_node = UINT32_MAX;
-#endif
+void MeshNode::dump_config() {
+  ESP_LOGCONFIG(TAG, "Meshmesh.node");
+  MeshmeshComponent::dump_config()
 }
 
-void MeshmeshComponent::pre_setup_preferences_() {
-  this->default_preferences_();
-  this->preferences_object = global_preferences->make_preference<MeshmeshSettings>(fnv1_hash("MeshmeshComponent"), true);
-  if (!this->preferences_object.load(&this->preferences_)) {
-    ESP_LOGE(TAG, "Can't read prederences from flash");
+
+int8_t MeshNode::recv_from_mesh(uint8_t *data, uint16_t size, uint32_t from) {
+  int8u_t result = MeshmeshComponent::recv_from_mesh(data, size, from);
+  if (result != FRAME_NOT_HANDLED) {
+    return result;
   }
-}
-
-void MeshmeshComponent::setup() {
-  this->pre_setup_preferences_();
-
-  this->mesh_ = new espmeshmesh::EspMeshMesh(0, 0, 0);
-  this->mesh_->setLogCb(logPrintfCb);
-  this->mesh_->pre_setup();
-  espmeshmesh::EspMeshMeshSetupConfig config = {
-    .hostname = App.get_name().c_str(),
-    .channel = this->preferences_.channel == UINT8_MAX ? this->config_channel_ : this->preferences_.channel,
-    .txPower = this->preferences_.txPower,
-  };
-  this->mesh_->setup(&config);
-  this->mesh_->addHandleFrameCb(std::bind(&MeshmeshComponent::handle_frame_, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-}
-
-void MeshmeshComponent::dump_config() {
-  ESP_LOGCONFIG(TAG, "Meshmesh");
-#ifdef USE_ESP32
-  ESP_LOGCONFIG(TAG, "Sys cip ID: %08lX", espmeshmesh::Discovery::chipId());
-#else
-  ESP_LOGCONFIG(TAG, "Sys cip ID: %08X", system_get_chip_id());
-  ESP_LOGCONFIG(TAG, "Curr. Channel: %d Saved Channel: %d", wifi_get_channel(), this->preferences_.channel);
-#endif
-}
-
-void MeshmeshComponent::set_password(const char *password) {
-  this->mesh_->setAesPassword(password);
-}
-
-void MeshmeshComponent::loop() {
-  this->mesh_->loop();
-
-  if (this->reboot_requested_) {
-    if (millis() - this->reboot_requested_time_ > REBOOT_DELAY_TIME+) {
-      App.reboot();
-    }
-  }
-}
-
-int8_t MeshmeshComponent::handle_frame_(uint8_t *data, uint16_t size, uint32_t from) {
-  //ESP_LOGD(TAG, "handleFrame: %d, size: %d, from: %d", data[0], size, from);
   switch (data[0]) {
+
     case CMD_NODE_TAG_REQ:
       if (size == 1) {
         uint8_t reply[33] = {0};
@@ -194,10 +129,6 @@ int8_t MeshmeshComponent::handle_frame_(uint8_t *data, uint16_t size, uint32_t f
       break;
   }
   return FRAME_NOT_HANDLED;
-}
-
-void logPrintfCb(int level, const char *tag, int line, const char *format, va_list args) {
-  esp_log_vprintf_(level, tag, line, format, args);
 }
 
 }  // namespace meshmesh
